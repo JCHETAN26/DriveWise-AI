@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard Insurance - Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        let portfolioData = null;
+
+        async function loadPortfolioData() {
+            try {
+                const response = await fetch('http://localhost:8005/api/v1/insurance/portfolio');
+                portfolioData = await response.json();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error loading portfolio data:', error);
+            }
+        }
+
+        function updateDashboard() {
+            if (!portfolioData) return;
+
+            document.getElementById('total-customers').textContent = portfolioData.total_customers.toLocaleString();
+            document.getElementById('monthly-revenue').textContent = '$' + portfolioData.monthly_premiums.toLocaleString();
+            document.getElementById('claims-ratio').textContent = Math.round(portfolioData.claims_ratio * 100) + '%';
+            document.getElementById('profit-margin').textContent = Math.round(portfolioData.profit_margin * 100) + '%';
+
+            // Update risk distribution
+            const risk = portfolioData.risk_distribution;
+            const total = portfolioData.total_customers;
+            document.getElementById('excellent-percent').textContent = Math.round((risk.excellent / total) * 100) + '%';
+            document.getElementById('good-percent').textContent = Math.round((risk.good / total) * 100) + '%';
+            document.getElementById('average-percent').textContent = Math.round((risk.average / total) * 100) + '%';
+            document.getElementById('high-risk-percent').textContent = Math.round((risk.high_risk / total) * 100) + '%';
+
+            // Update customer table
+            const tbody = document.getElementById('customer-table-body');
+            tbody.innerHTML = '';
+            
+            portfolioData.customers.forEach(customer => {
+                const row = document.createElement('tr');
+                const tierColor = {
+                    'excellent': 'bg-green-100 text-green-800',
+                    'good': 'bg-blue-100 text-blue-800',
+                    'average': 'bg-yellow-100 text-yellow-800',
+                    'high_risk': 'bg-red-100 text-red-800'
+                };
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${customer.name}</div>
+                        <div class="text-sm text-gray-500">${customer.vehicle}</div>
+                        <div class="text-sm text-gray-500">${customer.location}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${tierColor[customer.risk_tier]}">
+                            ${customer.risk_tier.toUpperCase().replace('_', ' ')}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">$${customer.current_premium}/month</div>
+                        <div class="text-sm text-gray-500">Was: $${customer.standard_premium}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${customer.discount_percent > 0 ? 
+                            `<span class="text-green-600 font-medium">-${customer.discount_percent}%</span>` :
+                            `<span class="text-red-600 font-medium">+${customer.surcharge_percent}%</span>`
+                        }
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="font-medium ${customer.claims === 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${customer.claims}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${customer.months_tracked} months</div>
+                        <div class="text-sm text-gray-500">${customer.total_trips} trips</div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Load data when page loads
+        window.addEventListener('DOMContentLoaded', loadPortfolioData);
+        
+        // Refresh data every 30 seconds
+        setInterval(loadPortfolioData, 30000);
+    </script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-indigo-700 text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-bold">🏢 SafeGuard Insurance Co.</h1>
+                    <span class="text-indigo-200 text-sm">DriveWise AI Management Portal</span>
+                </div>
+                <div class="space-x-4">
+                    <span class="px-3 py-2 bg-indigo-600 rounded">Portfolio Overview</span>
+                    <a href="http://localhost:3004" class="px-3 py-2 hover:bg-indigo-600 rounded">← Back to Demo</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Insurance Portfolio Dashboard</h1>
+            <p class="text-gray-600">Real-time insights into your DriveWise AI customer portfolio</p>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Total Customers</h3>
+                    <span class="text-blue-600">👥</span>
+                </div>
+                <div class="text-3xl font-bold text-blue-600" id="total-customers">...</div>
+                <p class="text-sm text-green-600 mt-2">+12% vs traditional</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Monthly Revenue</h3>
+                    <span class="text-green-600">💰</span>
+                </div>
+                <div class="text-3xl font-bold text-green-600" id="monthly-revenue">...</div>
+                <p class="text-sm text-green-600 mt-2">+8% growth</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Claims Ratio</h3>
+                    <span class="text-yellow-600">📊</span>
+                </div>
+                <div class="text-3xl font-bold text-yellow-600" id="claims-ratio">...</div>
+                <p class="text-sm text-green-600 mt-2">-22% vs industry</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Profit Margin</h3>
+                    <span class="text-purple-600">📈</span>
+                </div>
+                <div class="text-3xl font-bold text-purple-600" id="profit-margin">...</div>
+                <p class="text-sm text-green-600 mt-2">+12% vs traditional</p>
+            </div>
+        </div>
+
+        <!-- Risk Distribution and Insights -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Customer Risk Distribution</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-green-600">🟢 Excellent Drivers</span>
+                        <span class="text-sm font-medium" id="excellent-percent">...</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-blue-600">🔵 Good Drivers</span>
+                        <span class="text-sm font-medium" id="good-percent">...</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-yellow-600">🟡 Average Drivers</span>
+                        <span class="text-sm font-medium" id="average-percent">...</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-red-600">🔴 High Risk Drivers</span>
+                        <span class="text-sm font-medium" id="high-risk-percent">...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Business Insights</h2>
+                <div class="space-y-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-green-800">💡 Key Advantage</h4>
+                        <p class="text-sm text-green-700">80% of customers are good/excellent drivers, resulting in significantly lower claims</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-blue-800">📊 Performance</h4>
+                        <p class="text-sm text-blue-700">24% profit margin vs 8-12% industry average through precise risk pricing</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-purple-800">🎯 Strategy</h4>
+                        <p class="text-sm text-purple-700">Attract safe drivers with discounts, price out high-risk customers to competitors</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h2 class="text-lg font-semibold text-gray-900">Customer Portfolio Management</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tier</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Premium</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adjustment</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Claims</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Quality</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="customer-table-body">
+                        <!-- Dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center text-sm text-gray-500">
+            <p>🔄 Data refreshes automatically every 30 seconds • Connected to DriveWise AI Backend</p>
+        </div>
+    </main>
+</body>
+</html>
