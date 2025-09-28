@@ -6,49 +6,50 @@
 
 DriveWise AI revolutionizes the insurance industry by providing transparent, data-driven risk assessment based on actual driving behavior. The platform ingests real-world traffic data from TomTom and vehicle safety data from NHTSA, combines it with telematics, and uses advanced ML models to generate personalized driving safety scores and insurance risk assessments.
 
-### Key Features
+### Key Features - What's Actually Built ✅
 
-✅ **Real-time Data Ingestion**: Custom connectors for TomTom Traffic API and NHTSA Vehicle Safety API  
-✅ **Advanced ML Pipeline**: BigQuery ML and Vertex AI for risk modeling and safety scoring  
-✅ **Conversational AI Agent**: Natural language interface powered by Vertex AI + Gemini  
-✅ **Interactive Dashboard**: Real-time visualization of driving trends and risk factors  
-✅ **Transparent Insurance Scoring**: Behavior-based premium calculations  
-✅ **Traffic Hotspot Analysis**: Geographic risk assessment and route optimization  
+✅ **Real API Integration**: Direct TomTom Traffic API and NHTSA Vehicle Safety API integration  
+✅ **Intelligent Risk Scoring**: Advanced algorithms for personalized driving risk assessment  
+✅ **AI Chat Assistant**: Interactive chat with personalized responses using real user data  
+✅ **Live Insurance Dashboard**: Real-time portfolio visualization and customer analytics  
+✅ **Behavior-based Scoring**: Transparent risk assessment with clear explanations  
+✅ **Real-time Data Simulation**: Live traffic integration with dynamic risk updates  
 
 ## 🏗️ Architecture
 
 ```
+```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          DriveWise AI Platform                   │
+│                    DriveWise AI Platform (Built)                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
-│  │   TomTom    │    │    NHTSA    │    │ Telematics  │        │
-│  │ Traffic API │    │Vehicle API  │    │    Data     │        │
+│  │   TomTom    │    │    NHTSA    │    │    Mock     │        │
+│  │ Traffic API │    │Vehicle API  │    │  User Data  │        │
+│  │   (Real)    │    │   (Real)    │    │             │        │
 │  └─────┬───────┘    └─────┬───────┘    └─────┬───────┘        │
 │        │                  │                  │                │
 │        └──────────────────┼──────────────────┘                │
 │                           │                                   │
 │  ┌─────────────────────────▼─────────────────────────┐        │
-│  │              Custom Fivetran Connectors            │        │
+│  │            Python Data Connectors                  │        │
+│  │         (Direct API Integration)                   │        │
 │  └─────────────────────────┬─────────────────────────┘        │
 │                           │                                   │
 │  ┌─────────────────────────▼─────────────────────────┐        │
-│  │                Google BigQuery                     │        │
-│  │  • Raw data storage  • Feature engineering        │        │
-│  │  • Data warehouse    • ML model training          │        │
+│  │              FastAPI Backend                       │        │
+│  │  • Risk Scoring Logic    • Insurance Portfolio    │        │
+│  │  • AI Chat Responses     • Real-time Data Sim     │        │
+│  │  • User Profile System   • API Endpoints          │        │
 │  └─────────────────────────┬─────────────────────────┘        │
 │                           │                                   │
 │  ┌─────────────────────────▼─────────────────────────┐        │
-│  │            Vertex AI + BigQuery ML                 │        │
-│  │  • Risk scoring models  • Safety score models     │        │
-│  │  • Anomaly detection   • Predictive analytics     │        │
-│  └─────────────────────────┬─────────────────────────┘        │
-│                           │                                   │
-│  ┌─────────────────────────▼─────────────────────────┐        │
-│  │                FastAPI Backend                     │        │
-│  │  • REST APIs        • Authentication              │        │
-│  │  • Business logic   • Real-time processing       │        │
+│  │               React Frontend                       │        │
+│  │  • Insurance Dashboard   • AI Chat Widget         │        │
+│  │  • Real-time Updates     • Risk Visualization     │        │
+│  │  • Customer Analytics    • Responsive Design      │        │
+│  └─────────────────────────────────────────────────────┘        │
+```
 │  └─────────────────────────┬─────────────────────────┘        │
 │                           │                                   │
 │  ┌─────────────────────────▼─────────────────────────┐        │

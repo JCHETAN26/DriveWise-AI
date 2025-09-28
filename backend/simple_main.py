@@ -14,6 +14,27 @@ import json
 import os
 from nhtsa_connector import NHTSAConnector
 
+# Check if we should use mock Vertex AI
+USE_MOCK_VERTEX_AI = os.getenv("USE_MOCK_VERTEX_AI", "true").lower() == "true"
+
+# Try to import Vertex AI service (optional)
+VERTEX_AI_AVAILABLE = False
+vertex_ai_service = None
+
+if not USE_MOCK_VERTEX_AI:
+    try:
+        import sys
+        sys.path.append('/Users/chetan/AI Accelerate Hackathon/backend/services')
+        from vertex_ai_service import VertexAIService
+        VERTEX_AI_AVAILABLE = True
+        print("✅ Vertex AI libraries available")
+    except ImportError as e:
+        print(f"⚠️ Vertex AI not available: {e}")
+        print("📝 Using enhanced mock responses instead")
+        VERTEX_AI_AVAILABLE = False
+else:
+    print("🔧 Using mock Vertex AI mode for demo")
+
 # Initialize FastAPI app
 app = FastAPI(
     title="DriveWise AI API",
@@ -23,6 +44,16 @@ app = FastAPI(
 
 # Initialize NHTSA connector
 nhtsa = NHTSAConnector()
+
+# Initialize Vertex AI service (if available)
+if VERTEX_AI_AVAILABLE:
+    try:
+        vertex_ai_service = VertexAIService()
+        print("✅ Vertex AI service initialized successfully")
+    except Exception as e:
+        print(f"⚠️ Vertex AI initialization failed: {e}")
+        VERTEX_AI_AVAILABLE = False
+        vertex_ai_service = None
 
 # CORS middleware for frontend
 app.add_middleware(
@@ -363,34 +394,108 @@ def get_mock_dashboard_data(user_id: str) -> Dict[str, Any]:
         }
     }
 
-def generate_ai_response(message: str, user_id: str) -> str:
-    """Generate mock AI responses based on message content"""
+async def generate_ai_response(message: str, user_id: str) -> str:
+    """Generate AI responses using Vertex AI or enhanced mock responses"""
+    
+    # Try Vertex AI first if available
+    if VERTEX_AI_AVAILABLE and vertex_ai_service:
+        try:
+            # Get user context (risk scores, etc.)
+            user_context = {
+                "user_id": user_id,
+                "risk_score": get_risk_score_data(user_id),
+                "safety_score": get_safety_score_data(user_id),
+                "recent_trips": []  # Could be expanded with real trip data
+            }
+            
+            # Use Vertex AI for intelligent response
+            ai_response = await vertex_ai_service.chat(message, user_context)
+            return ai_response
+            
+        except Exception as e:
+            print(f"Vertex AI error, falling back to mock: {e}")
+    
+    # Enhanced mock responses with real user data
+    return generate_enhanced_mock_response(message, user_id)
+
+def generate_enhanced_mock_response(message: str, user_id: str) -> str:
+    """Generate intelligent mock responses using actual user data"""
     message_lower = message.lower()
     
-    responses = {
-        "safety": f"Your current safety score is 84/100! You're doing great with smooth acceleration (91%) and following distance (82%). To improve further, try maintaining more consistent speeds during city driving.",
+    # Get actual user data
+    risk_data = get_mock_risk_score(user_id)
+    safety_data = get_mock_safety_score(user_id)
+    user_info = MOCK_USERS.get(user_id, MOCK_USERS["user123"])
+    
+    # Extract actual scores
+    risk_score = risk_data["overall_score"]
+    safety_score = safety_data["overall_score"]
+    speeding = risk_data["risk_factors"]["speeding_score"]
+    braking = risk_data["risk_factors"]["hard_braking_score"]
+    following_distance = safety_data["safety_metrics"]["safe_following_distance"]
+    
+    # Personalized responses based on actual data
+    if any(word in message_lower for word in ["safety", "safe", "score"]):
+        return f"Hi {user_info['name']}! Your safety score is {safety_score}/100. Your following distance is {following_distance:.0%} - {'excellent' if following_distance > 0.8 else 'good' if following_distance > 0.6 else 'needs improvement'}. Your smooth acceleration is at {safety_data['safety_metrics']['smooth_acceleration']:.0%}."
+    
+    elif any(word in message_lower for word in ["risk", "dangerous", "premium"]):
+        risk_level = "low" if risk_score < 0.3 else "moderate" if risk_score < 0.5 else "high"
+        return f"Your risk score is {risk_score:.2f} ({risk_level} risk). Speeding events: {speeding:.1%} of trips. Hard braking: {braking:.1%}. {'Great job staying safe!' if risk_level == 'low' else 'Here are ways to improve...'}"
+    
+    elif any(word in message_lower for word in ["insurance", "discount", "save", "money"]):
+        potential_savings = max(0, (risk_score - 0.15) * 500)  # Rough estimate
+        return f"Based on your {risk_score:.2f} risk score, you could save ${potential_savings:.0f} annually with safer driving. Focus on reducing speeding ({speeding:.0%}) and hard braking ({braking:.0%})."
+    
+    elif any(word in message_lower for word in ["improve", "better", "tips", "help"]):
+        tips = []
+        if speeding > 0.2:
+            tips.append("🚗 Reduce speeding - currently at {:.0%}".format(speeding))
+        if braking > 0.3:
+            tips.append("🛑 Practice gentler braking - currently at {:.0%}".format(braking))
+        if following_distance < 0.7:
+            tips.append("↔️ Increase following distance - currently at {:.0%}".format(following_distance))
         
-        "risk": f"Your risk score is 0.23 (lower is better), which puts you in the 'low risk' category. Your strongest area is distraction management, but watch out for hard braking events - you've had 3 this week.",
+        if not tips:
+            tips = ["🎉 You're already doing great! Keep up the excellent driving."]
         
-        "insurance": f"Based on your driving pattern, you could save $216 annually! Your safe driving habits qualify you for an 18% discount. Keep up the good work with defensive driving.",
-        
-        "today": f"Today's driving summary: 2 trips, 43.4 km total distance. Your safety score improved by 2 points! I noticed smoother braking in traffic - excellent improvement.",
-        
-        "improve": f"Here are 3 ways to boost your scores: 1) Increase following distance on highways, 2) Reduce speed variations in city driving, 3) Practice gentler acceleration from stops.",
-        
-        "compare": f"You're driving safer than 78% of similar drivers in your area! Your speed limit adherence (76%) is above average, and your smooth acceleration (91%) is in the top 20%.",
-        
-        "hotspots": f"I've identified 3 high-risk areas on your common routes: Highway 101 near downtown (heavy congestion), Market Street intersection (frequent hard braking), and the Van Ness merge point.",
-        
-        "default": f"I'm your DriveWise AI assistant! I can help you understand your driving patterns, safety scores, and ways to save on insurance. What would you like to know about your driving?"
+        return f"Here are personalized tips for {user_info['name']}:\n" + "\n".join(tips)
+    
+    elif any(word in message_lower for word in ["today", "recent", "trips", "driving"]):
+        return f"Recent driving summary for your {user_info['vehicle']}: Risk score {risk_score:.2f}, Safety score {safety_score}/100. You're driving {'safely' if risk_score < 0.3 else 'moderately' if risk_score < 0.5 else 'with some risk areas to address'}."
+    
+    elif any(word in message_lower for word in ["compare", "others", "average", "rank"]):
+        percentile = max(10, min(95, int(100 - (risk_score * 150))))  # Convert risk to percentile
+        return f"You're driving safer than {percentile}% of drivers in {user_info['location']}! Your {user_info['vehicle']} shows excellent safety patterns."
+    
+    elif any(word in message_lower for word in ["hello", "hi", "hey", "start"]):
+        return f"Hello {user_info['name']}! I'm your DriveWise AI assistant. Your current risk score is {risk_score:.2f} and safety score is {safety_score}/100. What would you like to know about your driving?"
+    
+    else:
+        # Default response with actual data
+        return f"I'm your DriveWise AI assistant! Your current stats: Risk {risk_score:.2f}, Safety {safety_score}/100. I can help with safety tips, insurance insights, or driving analysis. What interests you most?"
+
+def get_risk_score_data(user_id: str) -> Dict[str, Any]:
+    """Get risk score data for AI context"""
+    # Use the existing mock data functions
+    risk_data = get_mock_risk_score(user_id)
+    return {
+        "overall_score": risk_data["overall_score"],
+        "speeding_score": risk_data["risk_factors"]["speeding_score"],
+        "hard_braking_score": risk_data["risk_factors"]["hard_braking_score"],
+        "acceleration_score": risk_data["risk_factors"]["acceleration_score"],
+        "distraction_score": risk_data["risk_factors"]["distraction_score"]
     }
-    
-    # Match keywords to responses
-    for keyword, response in responses.items():
-        if keyword in message_lower and keyword != "default":
-            return response
-    
-    return responses["default"]
+
+def get_safety_score_data(user_id: str) -> Dict[str, Any]:
+    """Get safety score data for AI context"""
+    # Use the existing mock data functions
+    safety_data = get_mock_safety_score(user_id)
+    return {
+        "overall_score": safety_data["overall_score"],
+        "safe_following_distance": safety_data["safety_metrics"]["safe_following_distance"],
+        "smooth_acceleration": safety_data["safety_metrics"]["smooth_acceleration"],
+        "speed_limit_adherence": safety_data["safety_metrics"]["speed_limit_adherence"]
+    }
 
 # API Routes
 @app.get("/")
@@ -433,12 +538,13 @@ async def get_dashboard_data(user_id: str):
 @app.post("/api/v1/chat")
 async def chat_with_ai(query: DrivingQuery):
     """Chat with DriveWise AI assistant"""
-    response_text = generate_ai_response(query.message, query.user_id)
+    response_text = await generate_ai_response(query.message, query.user_id)
     
     return {
         "response": response_text,
         "timestamp": datetime.now().isoformat(),
-        "user_id": query.user_id
+        "user_id": query.user_id,
+        "ai_powered": VERTEX_AI_AVAILABLE and vertex_ai_service is not None
     }
 
 @app.get("/api/v1/traffic-hotspots")

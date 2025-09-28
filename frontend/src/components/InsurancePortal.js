@@ -515,6 +515,128 @@ export const InsurancePortal = () => {
           </>
         )}
       </main>
+      
+      {/* Floating AI Chat Widget */}
+      <AIChat />
     </div>
+  );
+};
+
+// AI Chat Component
+const AIChat = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([
+    { type: 'ai', text: 'Hi! I\'m your DriveWise AI assistant. Ask me about driving scores, safety tips, or insurance insights!' }
+  ]);
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!message.trim()) return;
+
+    // Add user message
+    const userMessage = { type: 'user', text: message };
+    setMessages(prev => [...prev, userMessage]);
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8005/api/v1/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: 'user123', // Could be dynamic
+          message: message
+        })
+      });
+
+      const data = await response.json();
+      
+      // Add AI response
+      const aiMessage = { 
+        type: 'ai', 
+        text: data.response,
+        powered: data.ai_powered ? 'Vertex AI' : 'Demo Mode'
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, { 
+        type: 'ai', 
+        text: 'Sorry, I\'m having trouble connecting right now. Please try again!' 
+      }]);
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <>
+      {/* Chat Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors z-50"
+      >
+        🤖 AI
+      </button>
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div className="fixed bottom-20 right-4 w-96 h-96 bg-white rounded-lg shadow-xl border z-50 flex flex-col">
+          {/* Header */}
+          <div className="bg-blue-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+            <span className="font-semibold">DriveWise AI</span>
+            <button onClick={() => setIsOpen(false)} className="text-white hover:text-gray-200">×</button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 p-3 overflow-y-auto space-y-3">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`${
+                  msg.type === 'user' 
+                    ? 'bg-blue-100 ml-8 text-right' 
+                    : 'bg-gray-100 mr-8'
+                } p-2 rounded-lg`}
+              >
+                <div className="text-sm">{msg.text}</div>
+                {msg.powered && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Powered by {msg.powered}
+                  </div>
+                )}
+              </div>
+            ))}
+            {loading && (
+              <div className="bg-gray-100 mr-8 p-2 rounded-lg">
+                <div className="text-sm">Thinking...</div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="p-3 border-t flex space-x-2">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder="Ask about your driving..."
+              className="flex-1 border rounded px-2 py-1 text-sm"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={loading}
+              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
