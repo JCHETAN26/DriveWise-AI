@@ -144,7 +144,3 @@ The AI chat uses actual user risk scores, safety metrics, and profile informatio
 - BigQuery ML for advanced risk modeling
 - Real telematics data integration
 - Production insurance company features
-
-## 📝 License
-
-MIT License - Built for AI Accelerate Hackathon 2025
